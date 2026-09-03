@@ -1,0 +1,443 @@
+حتماً. 👍
+این بار مرحله‌به‌مرحله می‌ریم جلو و طوری می‌چینیم که فقط Copy/Paste کنی و اجرا بگیری.
+
+اول: کجا کپی‌پیست کنم؟
+
+اگر ویندوز داری، ساده‌ترین روش VS Code است.
+
+1. یک پوشه بساز
+
+مثلاً روی Desktop:
+
+torob_lite
+
+بعد VS Code را باز کن و:
+
+File → Open Folder → torob_lite
+
+داخل این پوشه باید این ساختار را بسازی:
+
+torob_lite/
+│
+├── app.py
+├── database.py
+├── aggregator.py
+├── crawlers.py
+├── requirements.txt
+│
+├── templates/
+│   ├── index.html
+│   ├── results.html
+│   └── product.html
+│
+└── static/
+    └── style.css
+
+یعنی مثلاً:
+
+کد app.py → داخل app.py
+
+کد database.py → داخل database.py
+
+کد HTML صفحه اصلی → templates/index.html
+
+CSS → static/style.css
+
+
+هر کد را داخل فایل خودش قرار بده، نه همه را داخل یک فایل.
+
+
+---
+
+مرحله ۳ — پنل مدیریت
+
+حالا می‌خواهیم سایت از حالت Demo ساده خارج شود.
+
+پنل مدیریت خواهیم داشت:
+
+/admin
+
+که مثلاً نشان می‌دهد:
+
+┌─────────────────────────────────┐
+│       پنل مدیریت ترب لایت       │
+├─────────────────────────────────┤
+│ محصولات       4                 │
+│ فروشگاه‌ها    2                 │
+│ پیشنهادها     8                 │
+│                                 │
+│ آخرین بروزرسانی                 │
+│ امروز 14:32                     │
+│                                 │
+│ [ بروزرسانی قیمت‌ها ]           │
+└─────────────────────────────────┘
+
+یک فایل جدید بساز
+
+داخل پوشه اصلی:
+
+admin.py
+
+ولی قبل از اینکه کد را اضافه کنیم، بهتر است یک اصلاح کوچک در database.py بدهیم تا آمار دیتابیس را هم بتوانیم بگیریم.
+
+انتهای database.py این تابع را اضافه کن:
+
+def get_stats():
+    conn = get_connection()
+
+    products = conn.execute(
+        "SELECT COUNT(*) AS count FROM products"
+    ).fetchone()["count"]
+
+    stores = conn.execute(
+        "SELECT COUNT(*) AS count FROM stores"
+    ).fetchone()["count"]
+
+    offers = conn.execute(
+        "SELECT COUNT(*) AS count FROM offers"
+    ).fetchone()["count"]
+
+    history = conn.execute(
+        "SELECT COUNT(*) AS count FROM price_history"
+    ).fetchone()["count"]
+
+    conn.close()
+
+    return {
+        "products": products,
+        "stores": stores,
+        "offers": offers,
+        "history": history,
+    }
+
+
+---
+
+حالا app.py را تغییر بده
+
+بالای app.py این را هم به importهای database اضافه کن:
+
+from database import (
+    init_db,
+    save_crawled_offers,
+    get_products,
+    get_product,
+    get_stats,
+)
+
+بعد این Route را قبل از:
+
+if __name__ == "__main__":
+
+اضافه کن:
+
+@app.route("/admin")
+def admin():
+    stats = get_stats()
+
+    return render_template(
+        "admin.html",
+        stats=stats
+    )
+
+
+---
+
+فایل پنل مدیریت
+
+داخل:
+
+templates/
+
+یک فایل جدید بساز:
+
+admin.html
+
+و این را داخلش Copy/Paste کن:
+
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>پنل مدیریت - ترب لایت</title>
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='style.css') }}"
+    >
+
+</head>
+
+
+<body>
+
+<header class="header">
+
+    <div class="container header-inner">
+
+        <a
+            href="{{ url_for('index') }}"
+            class="logo"
+        >
+            ترب لایت
+        </a>
+
+        <a
+            href="{{ url_for('index') }}"
+            class="back-btn"
+        >
+            مشاهده سایت
+        </a>
+
+    </div>
+
+</header>
+
+
+<main class="container product-page">
+
+    <section class="product-header">
+
+        <h1>
+            پنل مدیریت
+        </h1>
+
+        <p>
+            وضعیت دیتابیس و اطلاعات فروشگاه‌ها
+        </p>
+
+    </section>
+
+
+    <section class="admin-grid">
+
+        <div class="admin-card">
+
+            <span>
+                محصولات
+            </span>
+
+            <strong>
+                {{ stats["products"] }}
+            </strong>
+
+        </div>
+
+
+        <div class="admin-card">
+
+            <span>
+                فروشگاه‌ها
+            </span>
+
+            <strong>
+                {{ stats["stores"] }}
+            </strong>
+
+        </div>
+
+
+        <div class="admin-card">
+
+            <span>
+                پیشنهادهای قیمت
+            </span>
+
+            <strong>
+                {{ stats["offers"] }}
+            </strong>
+
+        </div>
+
+
+        <div class="admin-card">
+
+            <span>
+                رکوردهای تاریخچه
+            </span>
+
+            <strong>
+                {{ stats["history"] }}
+            </strong>
+
+        </div>
+
+    </section>
+
+
+    <section class="offers-section">
+
+        <h2>
+            عملیات
+        </h2>
+
+        <div class="admin-actions">
+
+            <a
+                href="{{ url_for('sync') }}"
+                class="sync-btn"
+            >
+                🔄 بروزرسانی قیمت‌ها
+            </a>
+
+            <a
+                href="{{ url_for('index') }}"
+                class="back-btn"
+            >
+                🏠 صفحه اصلی
+            </a>
+
+        </div>
+
+    </section>
+
+</main>
+
+</body>
+</html>
+
+
+---
+
+کمی CSS اضافه کنیم
+
+انتهای:
+
+static/style.css
+
+این را اضافه کن:
+
+.admin-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 18px;
+    margin-top: 25px;
+}
+
+.admin-card {
+    background: white;
+    border: 1px solid #e5e5e5;
+    border-radius: 14px;
+    padding: 25px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.admin-card span {
+    color: #777;
+    font-size: 14px;
+}
+
+.admin-card strong {
+    font-size: 30px;
+}
+
+.admin-actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+
+@media (max-width: 800px) {
+
+    .admin-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+}
+
+
+@media (max-width: 500px) {
+
+    .admin-grid {
+        grid-template-columns: 1fr;
+    }
+
+}
+
+
+---
+
+حالا اجرا کنیم 🚀
+
+در VS Code از منوی:
+
+Terminal → New Terminal
+
+یک Terminal پایین صفحه باز می‌شود.
+
+اول بزن:
+
+pip install -r requirements.txt
+
+بعد:
+
+python app.py
+
+اگر همه‌چیز درست باشد، چیزی شبیه این می‌بینی:
+
+* Running on http://127.0.0.1:5000
+
+حالا مرورگر را باز کن و برو:
+
+صفحه اصلی:
+
+http://127.0.0.1:5000
+
+پنل مدیریت:
+
+http://127.0.0.1:5000/admin
+
+
+---
+
+اگر python کار نکرد
+
+روی بعضی ویندوزها باید بنویسی:
+
+py app.py
+
+و برای نصب:
+
+py -m pip install -r requirements.txt
+
+
+---
+
+یک نکته خیلی مهم
+
+فعلاً این فروشگاه‌ها Mock هستند؛ یعنی قیمت‌هایی که می‌بینی واقعی نیستند و لینک example.com صرفاً برای تست برنامه است.
+
+بعد از اینکه این مرحله روی کامپیوترت بدون خطا اجرا شد، مرحله بعدی را می‌بریم روی:
+
+نسخه ۴ → کرالر واقعی
+
+یعنی به جای:
+
+Mock Store
+     ↓
+قیمت ساختگی
+
+می‌رسیم به:
+
+فروشگاه واقعی
+      ↓
+Crawler
+      ↓
+استخراج نام + قیمت + لینک
+      ↓
+SQLite
+      ↓
+ترب لایت
+
+اگر الان با VS Code روی ویندوز هستی، همین مراحل را انجام بده؛ اگر موقع python app.py خطایی قرمز گرفتی، کل متن خطا را همینجا بفرست تا دقیقاً همان خط را با هم درست کنیم.
